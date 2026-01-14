@@ -1,0 +1,6 @@
+files
+*.csv
+*.yaml
+*preprocessing.txt
+__pycache__/
+.DS_Store
