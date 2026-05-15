@@ -1,5 +1,5 @@
 from flask import Flask
-from flasgger import Flasgger
+from flasgger import Swagger
 from app.validate_rules import validate_rules_bp
 from app.validate_csv import validate_csv_bp
 from app.enrich_csv import enrich_csv_bp
@@ -20,9 +20,9 @@ def create_app():
     if os.path.exists(swagger_path):
         with open(swagger_path, 'r') as f:
             swagger_spec = json.load(f)
-        Flasgger(app, specs=[{'spec': swagger_spec}])
+        Swagger(app, template=swagger_spec)
     else:
         # Fallback to auto-generation if swagger.json not found
-        Flasgger(app)
+        Swagger(app)
 
     return app

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  transactions_enricher:
+    build:
+      target: development
+    container_name: transactions_enricher_dev
+    environment:
+      - FLASK_ENV=development
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    stdin_open: true
+    tty: true

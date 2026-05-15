@@ -5,7 +5,6 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -24,7 +23,7 @@ USER appuser
 # Development stage
 FROM base as development
 
-ENV FLASK_APP=main.py
+ENV FLASK_APP=app
 ENV FLASK_ENV=development
 
 EXPOSE 5000
@@ -36,6 +35,6 @@ FROM base as production
 
 ENV FLASK_ENV=production
 
-EXPOSE 5000
+EXPOSE 5001
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "--timeout", "120", "wsgi:app"]

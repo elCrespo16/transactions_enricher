@@ -8,7 +8,6 @@ validate_csv_bp = Blueprint('validate_csv', __name__)
 
 class ValidateCSVView(MethodView):
     def post(self):
-        print(request.files)
         if not request.files:
             return {"error": "Invalid input: file expected"}, 400
         if len(request.files.keys()) > 1:
