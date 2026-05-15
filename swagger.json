@@ -1,0 +1,400 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Transactions Enricher API",
+    "description": "A service for validating and enriching CSV transaction files using configurable rules.\nSupports validation of CSV files and rules, as well as enriching transaction data based on rules.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Felipe Castro"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/validate_csv": {
+      "post": {
+        "summary": "Validate CSV file",
+        "description": "Validates a CSV file to ensure it is properly formatted and contains data.\nThe file must be uploaded as multipart/form-data.",
+        "operationId": "validateCSV",
+        "tags": ["CSV Operations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "CSV file to validate"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "CSV is valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "CSV is valid. Total rows: 42"
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": ["date", "description", "amount", "balance"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "CSV is empty or has no data rows"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validate_rules": {
+      "post": {
+        "summary": "Validate rules",
+        "description": "Validates enrichment rules. Rules can be provided either as JSON in the request body\nor as a YAML/YML file in multipart/form-data.",
+        "operationId": "validateRules",
+        "tags": ["Rules Operations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rules": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Rule"
+                    }
+                  }
+                },
+                "example": {
+                  "rules": [
+                    {
+                      "conditions": [
+                        {
+                          "column": "description",
+                          "operator": "contains",
+                          "value": "sample"
+                        }
+                      ],
+                      "operations": [
+                        {
+                          "operation_type": "add_column",
+                          "column_values": [
+                            {
+                              "column": "category",
+                              "value": "sample_category"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "YAML or YML file containing rules"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rules are valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Rules are valid. Total rules: 5"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Rules validation failed: Invalid operator"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enrich_csv": {
+      "post": {
+        "summary": "Enrich CSV file with rules",
+        "description": "Enriches a CSV file by applying transformation rules. Requires a CSV file and rules\n(either as YAML file or JSON in request body). Optional configuration can be provided.",
+        "operationId": "enrichCSV",
+        "tags": ["CSV Operations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "CSV file to enrich (file name must end with .csv)"
+                  },
+                  "rules": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Rules file in YAML format (file name must end with .yaml or .yml).\nAlternative: provide 'rules' in JSON body if not uploading file."
+                  },
+                  "config": {
+                    "type": "string",
+                    "description": "Optional bank configuration in JSON format.\nExample: {\"padding_rows\": 0, \"separator\": \",\"}"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "CSV enriched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "CSV is valid and enriched. Total rows: 42"
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": ["date", "description", "amount", "balance", "category"]
+                    },
+                    "enriched_data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      },
+                      "description": "Array of enriched transaction rows.\nEach row contains all original columns plus any columns added by rules."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or enrichment failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "CSV file is required"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Condition": {
+        "type": "object",
+        "description": "A condition that determines if a rule should be applied",
+        "required": ["column", "operator", "value"],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "CSV column name to check",
+            "example": "description"
+          },
+          "operator": {
+            "type": "string",
+            "enum": ["contains", "equals", "starts_with", "ends_with", "regex", "greater_than", "less_than"],
+            "description": "Comparison operator"
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Value to compare against"
+          }
+        }
+      },
+      "ColumnValue": {
+        "type": "object",
+        "description": "Column and value to add/modify",
+        "required": ["column", "value"],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "Column name",
+            "example": "category"
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Value to set"
+          }
+        }
+      },
+      "Operation": {
+        "type": "object",
+        "description": "An operation to perform when rule conditions are met",
+        "required": ["operation_type"],
+        "properties": {
+          "operation_type": {
+            "type": "string",
+            "enum": ["add_column", "delete_row", "duplicate_row", "delete_column"],
+            "description": "Type of operation to perform"
+          },
+          "column_values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColumnValue"
+            },
+            "description": "Columns and values for the operation.\nRequired for 'add_column', 'delete_column', 'duplicate_row' operations."
+          }
+        }
+      },
+      "Rule": {
+        "type": "object",
+        "description": "A rule composed of conditions and operations",
+        "required": ["conditions", "operations"],
+        "properties": {
+          "conditions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Condition"
+            },
+            "description": "List of conditions (all must be met for rule to apply)"
+          },
+          "operations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Operation"
+            },
+            "description": "List of operations to perform when conditions are met"
+          }
+        }
+      },
+      "BankConfig": {
+        "type": "object",
+        "description": "Optional bank-specific configuration",
+        "properties": {
+          "padding_rows": {
+            "type": "integer",
+            "description": "Number of padding rows to skip at the start of CSV",
+            "default": 0
+          },
+          "separator": {
+            "type": "string",
+            "description": "CSV field separator",
+            "default": ","
+          },
+          "skip_rows_footer": {
+            "type": "integer",
+            "description": "Number of rows to skip at the end of CSV",
+            "default": 0
+          },
+          "encoding": {
+            "type": "string",
+            "description": "File encoding",
+            "default": "utf-8"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "CSV Operations",
+      "description": "Endpoints for CSV validation and enrichment"
+    },
+    {
+      "name": "Rules Operations",
+      "description": "Endpoints for rules validation"
+    }
+  ]
+}

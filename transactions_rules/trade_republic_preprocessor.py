@@ -1,3 +1,12 @@
+"""
+Trade Republic CSV Preprocessor
+==============================
+This script cleans and normalizes malformed CSV files exported from Trade Republic.
+It handles the specific 3-row batch format where each transaction is spread across three rows.
+The output is a new CSV file with standardized columns: date, type, description, entrada, salida, and balance.
+"""
+
+
 import csv
 import argparse
 from pathlib import Path

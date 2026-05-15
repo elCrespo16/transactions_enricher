@@ -1,4 +1,3 @@
-
 # Transactions Enricher
 
 Small utility to enrich bank transaction CSVs using configurable rules.
@@ -74,15 +73,21 @@ Example rule snippet:
 
 ```yaml
 rules:
-	- conditions:
-			- column: description
-				operator: contains
-				value: sample
-		operations:
-			- operation_type: add_column
-				column_values:
-					- column: category
-						value: sample_category
+  - conditions:
+      - column: description
+        operator: contains
+        value: sample
+    operations:
+      - operation_type: add_column
+        column_values:
+          - column: category
+            value: sample_category
+      - operation_type: arithmetic_operation
+        operator: concat
+        destination: description_copy
+        column_values:
+          - column: description
+          - column: category
 ```
 
 Condition fields:
@@ -91,12 +96,17 @@ Condition fields:
 - `value`: comparison value
 
 Operations
-- `duplicate_row`: returns original and a modified duplicate (useful for
-	re-categorizing a transaction while keeping the original)
+- `duplicate_row`: returns original and a modified duplicate
 - `add_column`: adds a new column if missing
 - `change_value`: sets a column value
 - `copy_columns`: copies value from one column to another
 - `delete_column`: removes a column from the row
+- `arithmetic_operation`: writes `destination` from `sources`
+
+Arithmetic operation fields
+- `destination`: target column to write
+- `column_values`: ordered list of source columns (each entry uses `column` to name the source)
+- `operator`: validated enum values: `+`, `-`, `concat`
 
 Extending
 - To add an operation: implement an `Operation` subclass in

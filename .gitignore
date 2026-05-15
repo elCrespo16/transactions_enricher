@@ -1,6 +1,8 @@
 files
 *.csv
 *.yaml
+*.pdf
 *preprocessing.txt
 __pycache__/
 .DS_Store
+*transactions/

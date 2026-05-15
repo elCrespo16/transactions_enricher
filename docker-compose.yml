@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  transactions_enricher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${TARGET_ENV:-development}
+    container_name: transactions_enricher_${TARGET_ENV:-development}
+    environment:
+      - FLASK_APP=app
+      - FLASK_ENV=${TARGET_ENV:-development}
+    ports:
+      - "${PORT:-5000}:5000"
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    networks:
+      - enricher_network
+    # Development mode with reload, production mode without
+    stdin_open: true
+    tty: true
+
+networks:
+  enricher_network:
+    driver: bridge
