@@ -2,9 +2,12 @@ import csv
 from io import StringIO
 from flask import request, Blueprint
 from flask.views import MethodView
+from flask_cors import CORS
+
 
 
 validate_csv_bp = Blueprint('validate_csv', __name__)
+CORS(validate_csv_bp, resources={r"/validate_csv": {"origins": "*"}})
 
 class ValidateCSVView(MethodView):
     def post(self):

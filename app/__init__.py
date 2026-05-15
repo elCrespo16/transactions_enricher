@@ -1,4 +1,5 @@
 from flask import Flask
+
 from flasgger import Swagger
 from app.validate_rules import validate_rules_bp
 from app.validate_csv import validate_csv_bp

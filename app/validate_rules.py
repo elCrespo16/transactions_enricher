@@ -1,9 +1,13 @@
 from flask import request, Blueprint
 from flask.views import MethodView
 from yaml import safe_load
+from flask_cors import CORS
+
 from transactions_rules.bank_rules import BankRules
 
+
 validate_rules_bp = Blueprint('validate_rules', __name__)
+CORS(validate_rules_bp, resources={r"/validate_rules": {"origins": "*"}})
 
 class ValidateRulesView(MethodView):
     def post(self):

@@ -1,5 +1,6 @@
 import json
 from flask import request, Blueprint
+from flask_cors import CORS
 from yaml import safe_load
 from flask.views import MethodView
 from transactions_rules.csv_processor import BankTransactionsCsvProcessor
@@ -8,6 +9,7 @@ from transactions_rules.transactions_enricher import BankConfig, BankEnricher
 
 
 enrich_csv_bp = Blueprint('enrich_csv', __name__)
+CORS(enrich_csv_bp, resources={r"/enrich_csv": {"origins": "*"}})
 
 class EnrichCSVView(MethodView):
     def post(self):
