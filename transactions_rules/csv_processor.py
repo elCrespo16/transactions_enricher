@@ -6,7 +6,7 @@ import os
 from io import StringIO
 from typing import Dict, List, Optional, TextIO
 
-from transactions_rules.transactions_enricher import BankConfig, BankEnricher
+from transactions_rules.transactions_enricher import BankConfiguration, BankEnricher
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class BankTransactionsCsvProcessor:
     def __init__(
         self,
-        bank_config: BankConfig,
+        bank_config: BankConfiguration,
         enricher: Optional[BankEnricher] = None,
     ) -> None:
         self.bank_config = bank_config

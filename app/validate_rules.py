@@ -3,7 +3,7 @@ from flask.views import MethodView
 from yaml import safe_load
 from flask_cors import CORS
 
-from transactions_rules.bank_rules import BankRules
+from transactions_rules.bank_rules import BankConfiguration
 
 
 validate_rules_bp = Blueprint('validate_rules', __name__)
@@ -25,8 +25,8 @@ class ValidateRulesView(MethodView):
                 return {"error": f"Failed to parse YAML: {str(exc)}"}, 400
 
         try:
-            rules = BankRules.parse_obj(rules_data)
-            return {"message": f"Rules are valid. Total rules: {len(rules.rules)}"}, 200
+            rules_config = BankConfiguration.parse_obj(rules_data)
+            return {"message": f"Rules are valid. Total rules: {len(rules_config.rules)}"}, 200
         except Exception as exc:
             exception_msg = str(exc).replace("\n", " ")
             return {"error": f"Rules validation failed: {exception_msg}"}, 400

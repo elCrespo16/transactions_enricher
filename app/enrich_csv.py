@@ -4,8 +4,8 @@ from flask_cors import CORS
 from yaml import safe_load
 from flask.views import MethodView
 from transactions_rules.csv_processor import BankTransactionsCsvProcessor
-from transactions_rules.bank_rules import BankRules
-from transactions_rules.transactions_enricher import BankConfig, BankEnricher
+from transactions_rules.bank_rules import BankConfiguration
+from transactions_rules.transactions_enricher import BankEnricher
 
 
 enrich_csv_bp = Blueprint('enrich_csv', __name__)
@@ -37,24 +37,18 @@ class EnrichCSVView(MethodView):
             except Exception as exc:
                 return {"error": f"Failed to parse rules YAML: {str(exc)}"}, 400
 
-        config = request.form.get('config')  # Optional config in JSON body
-
-        bank_config = BankConfig()  # Default config
-        if config:
+        bank_config = BankConfiguration()  # Default config
+        if rules:
             try:
                 config = json.loads(config)
-                bank_config = BankConfig.parse_obj(config)  # Validate config structure
+                bank_config = BankConfiguration.parse_obj(rules)  # Validate config structure
             except json.JSONDecodeError:
                 return {"error": "Failed to parse config JSON"}, 400
 
 
         try:
             content = csv_file.read().decode('utf-8')
-            try:
-                bank_rules = BankRules.parse_obj(rules)  # Validate rules structure
 
-            except Exception as exc:
-                return {"error": f"Failed to parse rules JSON: {str(exc)}"}, 400
 
             processor = BankTransactionsCsvProcessor(bank_config)
             rows = processor.read_rows_from_content(content)
@@ -62,7 +56,7 @@ class EnrichCSVView(MethodView):
             if not rows:
                 return {"error": "CSV is empty or has no data rows"}, 400
 
-            enricher = BankEnricher(bank_config=bank_config, bank_rules=bank_rules)
+            enricher = BankEnricher(bank_config=bank_config)
             enriched_rows = enricher.enrich_rows(rows)
 
             return {

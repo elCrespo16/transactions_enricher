@@ -6,3 +6,5 @@ files
 __pycache__/
 .DS_Store
 *transactions/
+*.log
+banks_config.json

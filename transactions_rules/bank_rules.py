@@ -1,10 +1,10 @@
-from typing import List, Set
+from typing import List, Set, Optional
 
 from transactions_rules.conditions import Condition
 from transactions_rules.operations import OperationConfig, ArithmeticOperationConfig, OperationFactory
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 class Rule(BaseModel):
     conditions: List[Condition]
     operations: List[ArithmeticOperationConfig | OperationConfig]
+    tags: List[str] = Field(default_factory=list)
 
     def check_and_apply(self, row):
         if self._is_rule_applicable(row):
@@ -61,38 +62,51 @@ class Rule(BaseModel):
     def __str__(self):
         conditions_str = ", ".join([str(cond) for cond in self.conditions])
         operations_str = ", ".join([str(op) for op in self.operations])
-        return f"Rule: {conditions_str} -> {operations_str}"
+        tags_str = f" | tags: {', '.join(self.tags)}" if self.tags else ""
+        if not conditions_str:
+            conditions_str = "always"
+        if not operations_str:
+            operations_str = "no operations"
+        return f"{conditions_str} -> {operations_str}{tags_str}"
 
 
 
-class BankRules(BaseModel):
-    rules: List[Rule]
+class BankConfiguration(BaseModel):
+    """Merged model combining bank config and rules."""
+    # Config properties
+    bank_name: Optional[str] = None
+    transactions_path: Optional[str] = None
+    padding_rows: int = 0
+    separator: str = ","
+    
+    # Rules properties
+    rules: List[Rule] = Field(default_factory=list)
 
     @classmethod
-    def load(cls, config_file) -> 'BankRules':
-        """
-        Load config from file
-        """
-        with open(config_file) as f:
-            config = yaml.load(f.read(), Loader=yaml.FullLoader)
+    def load(cls, config_file) -> "BankConfiguration":
+        """Load config from file."""
+        with open(config_file) as file_handle:
+            config = yaml.load(file_handle.read(), Loader=yaml.FullLoader)
         new_config = cls.parse_obj(config)
-        logger.info(f"Loaded rules config from {config_file}. Rules: {len(new_config.rules)}")
+        logger.info(f"Loaded bank configuration from {config_file} for bank '{new_config.bank_name}'")
         return new_config
 
     def save(self, file_name):
-        """
-        Save config to file
-        """
-        with open(file_name, "w") as f:
-            yaml.dump(self.dict(), f, default_flow_style=False)
+        """Save config to file."""
+        with open(file_name, "w") as file_handle:
+            yaml.dump(self.dict(), file_handle, default_flow_style=False)
 
     def process_row(self, row):
-        """
-        """
+        """Process a row through all rules."""
         new_rows = []
         for rule in self.rules:
             created_rows = rule.check_and_apply(row)
             if created_rows is not None:
                 new_rows += created_rows
         return new_rows
+
+
+# Backward compatibility aliases
+BankRules = BankConfiguration
+
 

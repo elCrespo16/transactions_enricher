@@ -35,9 +35,9 @@ class OperationConfig(BaseModel):
     def dict(self, **kwargs) -> Dict[str, Any]:
         data = {
             "operation_type": self.operation_type.value,
-            "column_values": [cv.model_dump() for cv in self.column_values],
+            "column_values": [cv.dict() for cv in self.column_values],
         }
-        data.update(self.model_extra or {})
+        data.update(getattr(self, "model_extra", None) or {})
         return data
 
     def __str__(self):

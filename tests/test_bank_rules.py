@@ -6,6 +6,23 @@ from transactions_rules.operations import ColumnValue, OperationConfig, Operatio
 
 
 class RuleTests(unittest.TestCase):
+    def test_rule_tags_are_preserved(self):
+        rule = Rule(
+            conditions=[
+                Condition(column="description", operator=OperatorEnum.CONTAINS, value="sample")
+            ],
+            operations=[
+                OperationConfig(
+                    operation_type=OperationsEnum.ADD_COLUMN,
+                    column_values=[ColumnValue(column="category", value="sample_category")],
+                )
+            ],
+            tags=["expenses", "groceries"],
+        )
+
+        self.assertEqual(rule.tags, ["expenses", "groceries"])
+        self.assertIn("tags: expenses, groceries", str(rule))
+
     def test_in_place_operation_mutates_row(self):
         rule = Rule(
             conditions=[

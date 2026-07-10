@@ -1,5 +1,5 @@
 from transactions_rules.csv_processor import BankTransactionsCsvProcessor
-from transactions_rules.transactions_enricher import BankConfig, BankEnricher
+from transactions_rules.transactions_enricher import BankConfiguration, BankEnricher
 from argparse import ArgumentParser
 import logging
 from pathlib import Path
@@ -65,12 +65,6 @@ def main():
         help="Override the transactions path from the config file",
     )
     parser.add_argument(
-        "--rules_config_path",
-        type=str,
-        default=None,
-        help="Override the rules config path from the config file",
-    )
-    parser.add_argument(
         "--file",
         type=str,
         default=None,
@@ -88,23 +82,15 @@ def main():
         logger.info("Default config generated successfully")
         return
 
-    if not args.config_file and not args.rules_config_path:
-        parser.error("Provide --config_file or --rules_config_path")
     if not args.config_file and not args.file and not args.transactions_path:
-        parser.error("Provide --file or --transactions_path when --config_file is not used")
+        parser.error("Provide --config_file or --file or --transactions_path")
 
     logger.info(f"Starting enrichment with config {args.config_file}")
     print("Starting transactions enrichment...")
-    bank_config = BankConfig.load(args.config_file) if args.config_file else BankConfig()
+    bank_config = BankConfiguration.load(args.config_file) if args.config_file else BankConfiguration()
     if args.transactions_path is not None:
         bank_config.transactions_path = args.transactions_path
-    if args.rules_config_path is not None:
-        bank_config.rules_config_path = args.rules_config_path
-
-    enricher = BankEnricher(
-        bank_config=bank_config,
-        rules_config_path=args.rules_config_path,
-    )
+    enricher = BankEnricher(bank_config=bank_config)
     processor = BankTransactionsCsvProcessor(enricher.bank_config, enricher)
     processor.process_all_files(single_file=args.file)
     logger.info("Enrichment finished successfully")

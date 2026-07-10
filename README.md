@@ -39,6 +39,44 @@ Run the enricher with an existing config:
 python main.py -f mybank.yaml
 ```
 
+**Streamlit rules editor**
+
+If you want to edit bank rule YAML files with a browser UI, start the
+Streamlit editor from the project root:
+
+```
+streamlit run streamlit_rule_editor.py
+```
+
+The editor lets you:
+- select any `*_bank_rules.yaml` file in the workspace,
+- edit the raw YAML directly,
+- validate and save the file,
+- filter rules by tag,
+- and review suggested tags without saving them until you click to add.
+
+Example rule tags:
+
+```yaml
+rules:
+  - tags:
+      - groceries
+      - recurring
+    conditions:
+      - column: description
+        operator: contains
+        value: supermarket
+    operations:
+      - operation_type: add_column
+        column_values:
+          - column: category
+            value: food
+```
+
+In the editor, tag suggestions are shown per rule as actions. They are not
+saved automatically; click a suggested tag to apply it. The sidebar tag
+filter shows only rules containing all selected tags.
+
 This will read CSV files from the `transactions_path` defined in the
 bank config and write enriched files next to each input file with the
 suffix `_enriched.csv`.
