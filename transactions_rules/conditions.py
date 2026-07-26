@@ -22,11 +22,11 @@ class ContainsOperator(Operator):
 
     def apply(self, operand_1: Any, operand_2: str) -> bool:
         try:
-            operand_1 = str(operand_1)
+            operand_1 = str(operand_1).lower()
         except Exception:
             logger.warning(f"Error occurred while converting {operand_1} to string")
             return False
-        return operand_1 in operand_2
+        return operand_1 in operand_2.lower()
 
 class EqualOperator(Operator):
     name = OperatorEnum.EQUAL

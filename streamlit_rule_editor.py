@@ -1,13 +1,15 @@
 from __future__ import annotations
 import copy
+from flask import config
+import yaml
 from pathlib import Path
 from itertools import count
 
 import streamlit as st
 import streamlit.components.v1 as components
-import yaml
+from code_editor import code_editor
 
-from transactions_rules.bank_rules import BankConfiguration
+from transactions_rules.bank_rules import BankConfiguration, Rule
 
 
 APP_TITLE = "Transactions Rules Editor"
@@ -278,9 +280,14 @@ class RulesEditorState:
 
     @staticmethod
     def refresh_parsed_from_editor() -> None:
-        st.session_state.parsed_rules = BankConfiguration(
-            rules=[item["rule"] for item in st.session_state.editor_rules]
-        )
+        if st.session_state.parsed_rules is not None:
+            st.session_state.parsed_rules.rules = [
+                item["rule"] for item in st.session_state.editor_rules
+            ]
+        else:
+            st.session_state.parsed_rules = BankConfiguration(
+                rules=[item["rule"] for item in st.session_state.editor_rules]
+            )
         st.session_state.yaml_text = YamlManager.dump_rules_yaml(st.session_state.parsed_rules)
 
     @staticmethod
@@ -311,7 +318,7 @@ class RuleOperations:
         new_rule_id = next(st.session_state.next_rule_id)
         editor_rule = {
             "id": new_rule_id,
-            "rule": BankConfiguration.parse_obj({"rules": [RulesEditorState.blank_rule()]}).rules[0],
+            "rule": Rule.parse_obj(RulesEditorState.blank_rule()),
         }
         st.session_state.editor_rules.insert(0, editor_rule)
         RulesEditorState.refresh_parsed_from_editor()
@@ -361,7 +368,6 @@ class RuleCardRenderer:
         operation_label = "operation" if operation_count == 1 else "operations"
         return f"{condition_text} → {operation_count} {operation_label}"
 
-
     @staticmethod
     def render(editor_rule: dict, display_index: int) -> None:
         rule = editor_rule["rule"]
@@ -369,56 +375,92 @@ class RuleCardRenderer:
         is_focused = st.session_state.focus_rule_id == rule_id
 
         rule_summary = RuleCardRenderer.format_rule_summary(rule)
-        label = f"## #{display_index} \n**{rule_summary}**"
+        label = f"## #{display_index}\n**{rule_summary}**"
 
         with st.expander(label, expanded=is_focused or display_index == 1):
 
-            # Editable YAML for this individual rule
-            yaml_key = f"rule_yaml_{rule_id}"
-            current_yaml = yaml.safe_dump(rule.dict(), sort_keys=False, allow_unicode=True)
-            yaml_text = st.text_area(
-                "Rule YAML",
-                value=st.session_state.get(yaml_key, current_yaml),
-                key=yaml_key,
-                height=220,
-                help="Edit this rule's YAML and click 'Save rule' to apply."
+            # Build one YAML document
+            rule_yaml = yaml.safe_dump(
+                {
+                    "conditions": [c.dict() for c in rule.conditions],
+                    "operations": [o.dict() for o in rule.operations],
+                },
+                sort_keys=False,
+                allow_unicode=True,
             )
 
-            # Save rule button: validate and replace the rule in editor state
+            response = code_editor(
+                rule_yaml,
+                lang="yaml",
+                theme="dark",
+                shortcuts="vscode",
+                height=400,
+                key=f"rule_editor_{rule_id}",
+                buttons=[
+                    {
+                        "name": "Save rule changes",
+                        "feather": "Save",
+                        "primary": True,
+                        "alwaysOn": True,
+                        "hasText": True,
+                        "commands": ["submit"],
+                        "style": {"top": "0.46rem", "right": "0.4rem"}
+                    }
+                ],
+                props={
+                    "tabSize": 2,
+                    "useSoftTabs": True,
+                    "showPrintMargin": False,
+                    "wrap": True,
+                },
+                editor_props={
+                    "tabSize": 2,
+                    "useSoftTabs": True,
+                    "showPrintMargin": False,
+                    "wrap": True,
+                },
+            )
 
+            # Handle save
+            if response and response.get("type") == "submit":
+                try:
+                    parsed = yaml.safe_load(response["text"]) or {}
 
-            action_col1, action_col2, action_col3 = st.columns(3)
-            with action_col1:
+                    new_rule = Rule.parse_obj(
+                        {
+                            "conditions": parsed.get("conditions", []),
+                            "operations": parsed.get("operations", []),
+                            "tags": rule.tags,
+                        }
+                    )
+
+                    editor_rule["rule"] = new_rule
+                    RulesEditorState.refresh_parsed_from_editor()
+
+                    st.session_state.status_message = "Saved rule changes"
+                    st.session_state.status_type = "success"
+                    render_status_message()
+
+                except Exception as e:
+                    st.error(str(e))
+
+            # Action buttons
+            col1, col2 = st.columns(2)
+
+            with col1:
                 if st.button("📋 Duplicate", key=f"duplicate_rule_{rule_id}"):
                     RuleOperations.duplicate_rule(rule_id)
                     st.session_state.focus_rule_id = None
-                    st.session_state.status_message = f"Duplicated"
+                    st.session_state.status_message = "Duplicated rule"
                     st.session_state.status_type = "success"
                     st.rerun()
-            with action_col2:
+
+            with col2:
                 if st.button("🗑️ Delete", key=f"delete_rule_{rule_id}"):
                     RuleOperations.delete_rule(rule_id)
-                    st.session_state.status_message = f"Deleted"
+                    st.session_state.status_message = "Deleted rule"
                     st.session_state.status_type = "success"
                     st.rerun()
-            with action_col3:
-                if st.button("💾 Save rule", key=f"save_rule_{rule_id}"):
-                    try:
-                        parsed = yaml.safe_load(yaml_text) or {}
-                        # validate by parsing into BankConfiguration with a single rule
-                        validated_rules = BankConfiguration.parse_obj({"rules": [parsed]}).rules
-                        if not validated_rules:
-                            raise ValueError("Parsed YAML did not yield a rule.")
-                        new_rule = validated_rules[0]
-                        # update editor rule in session_state
-                        editor_rule["rule"] = new_rule
-                        RulesEditorState.refresh_parsed_from_editor()
-                        st.session_state.status_message = "Rule saved"
-                        st.session_state.status_type = "success"
-                        st.rerun()
-                    except Exception as exc:
-                        st.session_state.status_message = f"Failed to save rule: {exc}"
-                        st.session_state.status_type = "error"
 
 
 class OverviewRenderer:
@@ -569,7 +611,6 @@ def main() -> None:
 
     ScrollManager.scroll_to_top_if_needed()
 
-
     structured_tab, raw_tab = st.tabs(["Structured editor", "Raw YAML"])
 
     with structured_tab:
@@ -579,7 +620,6 @@ def main() -> None:
         with col1:
             if st.button("➕ Add rule"):
                 RuleOperations.add_blank_rule()
-                st.rerun()
         with col2:
             if st.button("✔️ Validate"):
                 try:
@@ -587,6 +627,7 @@ def main() -> None:
                     rule_count = len(st.session_state.parsed_rules.rules)
                     st.session_state.status_message = f"Valid • {rule_count} rule(s)"
                     st.session_state.status_type = "success"
+                    st.rerun()
                 except Exception as exc:
                     st.session_state.status_message = f"Invalid: {exc}"
                     st.session_state.status_type = "error"
@@ -597,6 +638,7 @@ def main() -> None:
                     selected_file.write_text(YamlManager.dump_rules_yaml(st.session_state.parsed_rules), encoding="utf-8")
                     st.session_state.status_message = f"Saved {selected_file.name}"
                     st.session_state.status_type = "success"
+                    st.rerun()
                 except Exception as exc:
                     st.session_state.status_message = f"Save failed: {exc}"
                     st.session_state.status_type = "error"
@@ -618,13 +660,26 @@ def main() -> None:
 
     with raw_tab:
         st.subheader("📝 Raw YAML")
-        st.text_area(
-            "Rules YAML",
-            key="yaml_text",
-            height=620,
-            label_visibility="collapsed",
+        code_editor(
+            st.session_state.yaml_text,
+            lang="yaml",
+            theme="dark",
+            shortcuts="vscode",
+            key=f"yaml_text",
+            props={
+                "tabSize": 2,
+                "useSoftTabs": True,
+                "showPrintMargin": False,
+                "wrap": True,
+            },
+            editor_props={
+                "tabSize": 2,
+                "useSoftTabs": True,
+                "showPrintMargin": False,
+                "wrap": True,
+                "readOnly": True,
+            },
         )
-        st.caption("Edit and click 'Apply YAML' to sync the structured editor.")
 
 
 if __name__ == "__main__":
