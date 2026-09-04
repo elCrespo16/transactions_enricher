@@ -164,6 +164,3 @@ License & Contributing
 	share the code.
 - Contributions: open an issue or PR with a focused change (new
 	operation, operator, bugfix or tests).
-
-If you want, I can also add a minimal `requirements.txt` and a simple
-example config + rules file to help get started. Would you like that?
